@@ -8,13 +8,16 @@
     <view
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        class="psobolik.desktopclock.DeskClockView"
+        class="psobolik.dockclock.DockClockView"
         android:id="@+id/view"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
         android:paddingTop="0dp"
-        android:paddingRight="16dp" />
+        android:paddingRight="16dp"
+        android:background="#ff000000"
+        android:paddingLeft="16dp"
+        android:paddingBottom="0dp" />
 
 </RelativeLayout>

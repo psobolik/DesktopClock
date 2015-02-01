@@ -1,4 +1,4 @@
-package psobolik.desktopclock;
+package psobolik.dockclock;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
