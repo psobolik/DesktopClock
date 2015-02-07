@@ -1,22 +1,20 @@
 package psobolik.dockclock;
 
-import android.app.UiModeManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Configuration;
 import android.os.BatteryManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements OnSetUiVisibilityListener, android.support.v7.app.ActionBar.OnMenuVisibilityListener {
     private BroadcastReceiver mBroadcastReceiver;
     private DockClockView mDockClockView;
+    private boolean mIsMenuOpen = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +46,6 @@ public class MainActivity extends ActionBarActivity {
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
-
     }
 
     @Override
@@ -59,10 +56,12 @@ public class MainActivity extends ActionBarActivity {
         intentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
         intentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
         this.registerReceiver(this.mBroadcastReceiver, intentFilter);
+        this.getSupportActionBar().addOnMenuVisibilityListener(this);
     }
 
     @Override
     public void onStop() {
+        this.getSupportActionBar().removeOnMenuVisibilityListener(this);
         this.unregisterReceiver(this.mBroadcastReceiver);
         super.onStop();
     }
@@ -76,16 +75,46 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        // Handle item selection
+        boolean result;
+        switch (item.getItemId()) {
+            case R.id.about_menu_item:
+                showAboutDialog();
+                result = true;
+                break;
+            default:
+                result = super.onOptionsItemSelected(item);
         }
+        return result;
+    }
 
-        return super.onOptionsItemSelected(item);
+    private void showAboutDialog() {
+        AboutDialogFragment aboutDialogFragment = AboutDialogFragment.newInstance();
+        aboutDialogFragment.setStyle(android.support.v4.app.DialogFragment.STYLE_NO_TITLE, 0);
+        aboutDialogFragment.show(getSupportFragmentManager(), "dialog");
+    }
+
+    @Override
+    public void onSetUiVisibility(boolean visible) {
+        android.support.v7.app.ActionBar actionBar = this.getSupportActionBar();
+        if (actionBar != null) {
+            if (visible) {
+                actionBar.show();
+            } else {
+                actionBar.hide();
+            }
+        }
+    }
+
+    @Override
+    public boolean canSetUiVisibility() {
+        //Log.d("canSetUIVisibility", Boolean.toString(!this.mIsMenuOpen).toString());
+        return !this.mIsMenuOpen;
+    }
+
+    @Override
+    public void onMenuVisibilityChanged(boolean isVisible) {
+        this.mIsMenuOpen = isVisible;
+        this.mDockClockView.setNavVisibility(true);
     }
 }

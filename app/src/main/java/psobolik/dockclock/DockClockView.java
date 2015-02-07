@@ -2,13 +2,12 @@ package psobolik.dockclock;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.os.Handler;
 import android.text.TextPaint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 
 import java.text.SimpleDateFormat;
@@ -21,7 +20,9 @@ import java.util.Locale;
  * DockClockView
  * Created by psobolik on 2015-01-18.
  */
-public class DockClockView extends View {
+class DockClockView extends View
+        implements View.OnSystemUiVisibilityChangeListener, View.OnClickListener {
+    private OnSetUiVisibilityListener mOnSetUiVisibilityListener = null;
     private boolean mIsPowerConnected = false;
 
     private final TextPaint mPaint = new TextPaint();
@@ -30,16 +31,22 @@ public class DockClockView extends View {
     private int mTimeTextSize = 0;
     private int mDateTextSize = 0;
 
-    private java.text.DateFormat mTimeDateFormat = new SimpleDateFormat("h:mm", Locale.getDefault());
-    private java.text.DateFormat mAmPmDateFormat = new SimpleDateFormat("a", Locale.getDefault());
-    private java.text.DateFormat mDayDateFormat = new SimpleDateFormat("EEEE", Locale.getDefault());
-    private java.text.DateFormat mDateDateFormat = new SimpleDateFormat("MMMM d yyyy", Locale.getDefault());
+    private final java.text.DateFormat mTimeDateFormat = new SimpleDateFormat("h:mm", Locale.getDefault());
+    private final java.text.DateFormat mAmPmDateFormat = new SimpleDateFormat("a", Locale.getDefault());
+    private final java.text.DateFormat mDayDateFormat = new SimpleDateFormat("EEEE", Locale.getDefault());
+    private final java.text.DateFormat mDateDateFormat = new SimpleDateFormat("MMMM d yyyy", Locale.getDefault());
 
     private final Rect mTimeRect = new Rect();
     private final Rect mAmPmRect = new Rect();
     private final Rect mSecondsRect = new Rect();
     private final Rect mDayRect = new Rect();
     private final Rect mDateRect = new Rect();
+
+    private final Runnable mNavHider = new Runnable() {
+        @Override public void run() {
+            setNavVisibility(false);
+        }
+    };
 
     public DockClockView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
@@ -56,9 +63,55 @@ public class DockClockView extends View {
     }
 
     private void init() {
+        Context context = this.getContext();
+        if (OnSetUiVisibilityListener.class.isAssignableFrom(context.getClass())) {
+            this.mOnSetUiVisibilityListener = (OnSetUiVisibilityListener)context;
+        }
+
+        setOnSystemUiVisibilityChangeListener(this);
+
         // Set up the paint
         this.mPaint.setTextAlign(Paint.Align.RIGHT);
         this.mPaint.setStrokeWidth(4);
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.setSystemUiVisibility(visibility);
+
+        this.setNavVisibility(true);
+    }
+
+    @Override
+    public void onClick(View v) {
+        this.setNavVisibility(true);
+    }
+
+    @Override
+    public void onSystemUiVisibilityChange(int visibility) {
+        if ((visibility & SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
+            setNavVisibility(true);
+        }
+    }
+
+    public void setNavVisibility(boolean visible) {
+        int visibility;
+
+        if (visible) {
+            visibility = View.SYSTEM_UI_FLAG_VISIBLE;
+            Handler handler = this.getHandler();
+            if (handler != null) {
+                handler.removeCallbacks(mNavHider);
+                handler.postDelayed(mNavHider, 3000);
+            }
+        } else {
+            visibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+        }
+        if (this.mOnSetUiVisibilityListener != null && this.mOnSetUiVisibilityListener.canSetUiVisibility()) {
+            this.setSystemUiVisibility(visibility);
+            // Hide the Action Bar, too
+            this.mOnSetUiVisibilityListener.onSetUiVisibility(visible);
+        }
     }
 
     private int compare(int v1, int v2) {
@@ -78,7 +131,7 @@ public class DockClockView extends View {
         while(true) {
             paint.setTextSize(result);
             paint.getTextBounds(text, 0, text.length(), this.mScratchRect);
-            Log.d("calculateTextSize", String.format("target: %d; calc: %d", width, this.mScratchRect.width()));
+            //Log.d("calculateTextSize", String.format("target: %d; calc: %d", width, this.mScratchRect.width()));
             int b = compare(this.mScratchRect.width(), width);
             if (b == 0) break;
             else switch (b) {
@@ -90,7 +143,7 @@ public class DockClockView extends View {
                     break;
             }
             result = (high + low) / 2;
-            Log.d("calculateTextSize", String.format("low: %d; high: %d; result: %d", low, high, result));
+            //Log.d("calculateTextSize", String.format("low: %d; high: %d; result: %d", low, high, result));
         }
         return result;
     }
@@ -116,13 +169,13 @@ public class DockClockView extends View {
         final String DATE_TEXT = "September MM, MMMM";
         final String THREE_MS = "MMM";
         final String ONE_M  = "M";
-        final int SECOND_MARGIN_SIDES = 10;
-        final int SECOND_MARGIN_TOP = 20;
 
         super.onSizeChanged(xNew, yNew, xOld, yOld);
 
         this.mDateTextSize = this.calculateTextSize(xNew, DATE_TEXT);
         this.mTimeTextSize = this.mDateTextSize * 2;
+        int secondsHeight = this.mDateTextSize / 8;
+        int secondsMargin = secondsHeight * 2;
 
         int left = this.getPaddingLeft();
         int right = this.getWidth() - this.getPaddingRight();
@@ -137,22 +190,20 @@ public class DockClockView extends View {
         this.mAmPmRect.set(right - width, top, right, top + height);
         this.mTimeRect.set(left, top, right - width, top + height);
 
-        top += height + SECOND_MARGIN_TOP;
+        top += height + secondsMargin;
         height = (int) this.mPaint.getFontSpacing();
         this.mDayRect.set(left, top, right, top + height);
 
         top += height;
         this.mDateRect.set(left, top, right, top + height);
 
-        left += SECOND_MARGIN_SIDES;
-        top = this.mTimeRect.bottom + SECOND_MARGIN_TOP;
-        right -= SECOND_MARGIN_SIDES;
-        this.mSecondsRect.set(left, top, right, top + this.mDateTextSize / 4);
+        top = this.mTimeRect.bottom + secondsMargin;
+        this.mSecondsRect.set(left, top, right, top + secondsHeight);
 
-        Log.d("mAmPmRect", this.mAmPmRect.toString());
-        Log.d("mTimeRect", this.mTimeRect.toString());
-        Log.d("mDayRect", this.mDayRect.toString());
-        Log.d("mDateRect", this.mDateRect.toString());
+//        Log.d("mAmPmRect", this.mAmPmRect.toString());
+//        Log.d("mTimeRect", this.mTimeRect.toString());
+//        Log.d("mDayRect", this.mDayRect.toString());
+//        Log.d("mDateRect", this.mDateRect.toString());
     }
 
     @Override
@@ -207,28 +258,5 @@ public class DockClockView extends View {
         final int COLOR_POWER_DISCONNECTED = 0xffffffff;
 
         return this.mIsPowerConnected ? COLOR_POWER_CONNECTED : COLOR_POWER_DISCONNECTED;
-//        int result;
-//        switch (this.mDockState) {
-//            case Intent.EXTRA_DOCK_STATE_CAR:
-//                result = 0xffb8c0fc;
-//                break;
-//            case Intent.EXTRA_DOCK_STATE_DESK:
-//                result = 0xff0cab31;
-//                break;
-//            case Intent.EXTRA_DOCK_STATE_HE_DESK:
-//                result = 0xfffcb6e7;
-//                break;
-//            case Intent.EXTRA_DOCK_STATE_LE_DESK:
-//                result = 0xfffacb98;
-//                break;
-//            case Intent.EXTRA_DOCK_STATE_UNDOCKED:
-//                result = 0xffff0000;
-//                break;
-//            default:
-//                result = 0xffffffff;
-//                break;
-//        }
-//        return result;
     }
-
 }
