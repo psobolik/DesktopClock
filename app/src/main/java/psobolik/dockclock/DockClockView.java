@@ -89,7 +89,7 @@ class DockClockView extends View
 
     @Override
     public void onSystemUiVisibilityChange(int visibility) {
-        if ((visibility & SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
+        if ((visibility & View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
             setNavVisibility(true);
         }
     }
@@ -105,7 +105,7 @@ class DockClockView extends View
                 handler.postDelayed(mNavHider, 3000);
             }
         } else {
-            visibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+            visibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LOW_PROFILE;
         }
         if (this.mOnSetUiVisibilityListener != null && this.mOnSetUiVisibilityListener.canSetUiVisibility()) {
             this.setSystemUiVisibility(visibility);
