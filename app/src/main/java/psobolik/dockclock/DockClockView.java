@@ -58,7 +58,7 @@ class DockClockView extends View
         init();
     }
 
-    public void setIsPowerConnected(boolean isPowerConnected) {
+    void setIsPowerConnected(boolean isPowerConnected) {
         this.mIsPowerConnected = isPowerConnected;
     }
 
@@ -94,7 +94,7 @@ class DockClockView extends View
         }
     }
 
-    public void setNavVisibility(boolean visible) {
+    void setNavVisibility(boolean visible) {
         int visibility;
 
         if (visible) {
@@ -211,7 +211,7 @@ class DockClockView extends View
         final int TICKS_PER_SECOND = 1;
         final int TICKS = 1000 / TICKS_PER_SECOND;
 
-        @SuppressLint("DrawAllocation") GregorianCalendar calendar = new GregorianCalendar();
+        Calendar calendar = Calendar.getInstance();
         Date now = calendar.getTime();
 
         String text;
